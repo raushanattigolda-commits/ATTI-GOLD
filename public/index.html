@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ATTI GOLD</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="brand">ATTI GOLD</div>
+  <button onclick="logout()">Logout</button>
+</header>
+
+<main>
+
+<section id="auth">
+  <div class="card">
+    <h1>Welcome</h1>
+    <p>Create your account or sign in.</p>
+
+    <div class="tabs">
+      <button onclick="showTab('login')">Login</button>
+      <button onclick="showTab('register')">Register</button>
+    </div>
+
+    <form id="login" onsubmit="login(event)">
+      <input id="lm" placeholder="Mobile" required>
+      <input id="lp" type="password" placeholder="Password" required>
+      <button>Login</button>
+    </form>
+
+    <form id="register" class="hidden" onsubmit="register(event)">
+      <input id="rn" placeholder="Full name" required>
+      <input id="rm" placeholder="Mobile" required>
+      <input id="rp" type="password" placeholder="Password (8+ chars)" required>
+      <input id="rr" placeholder="Referral code (optional)">
+      <button>Create account</button>
+    </form>
+
+    <p id="msg"></p>
+  </div>
+</section>
+
+<section id="dashboard" class="hidden">
+
+  <h1>Dashboard</h1>
+
+  <div class="grid">
+
+    <div class="card">
+      <small>Wallet balance</small>
+      <strong id="balance">₹0</strong>
+    </div>
+
+    <div class="card">
+      <small>Referral code</small>
+      <strong id="ref">-</strong>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <h2>Plans</h2>
+    <div id="plans"></div>
+  </div>
+
+  <div class="card">
+    <h2>Withdrawal Request</h2>
+
+    <form onsubmit="withdraw(event)">
+      <input id="wa" type="number" min="1"
+             placeholder="Amount" required>
+
+      <input id="wm"
+             placeholder="Method (e.g. UPI)" required>
+
+      <input id="wacc"
+             placeholder="Account / UPI ID" required>
+
+      <button>Submit Request</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Recent Transactions</h2>
+    <div id="tx"></div>
+  </div>
+
+</section>
+
+</main>
+
+<script src="/app.js"></script>
+
+</body>
+</html>

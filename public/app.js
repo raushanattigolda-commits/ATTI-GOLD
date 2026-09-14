@@ -145,9 +145,9 @@ async function loadPlans() {
         <h3>${plan.name}</h3>
         <p>Amount: ₹${plan.amount}</p>
         <p>Duration: ${plan.duration_days} days</p>
-        <button onclick="viewPlan(${plan.id})">
-          View
-        </button>
+      <button onclick="viewPlan(${plan.id})">
+  Buy Now
+</button>
       `;
 
       box.appendChild(div);

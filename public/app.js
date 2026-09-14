@@ -128,7 +128,8 @@ async function loadPlans() {
 
     box.innerHTML = "";
 
-    data.plans.forEach((plan) => {
+    const plans = Array.isArray(data) ? data : (data.plans || []);
+plans.forEach((plan) => {
       const div = document.createElement("div");
       div.className = "plan-card";
 

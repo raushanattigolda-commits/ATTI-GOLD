@@ -27,7 +27,7 @@ async function api(url, options = {}) {
 }
 
 async function login(event) {
-  if (event) event.preventDefault();
+  event.preventDefault();
 
   try {
     const mobile = $("lm").value.trim();
@@ -44,16 +44,14 @@ async function login(event) {
     token = data.token;
     localStorage.setItem("ag_token", token);
 
-    alert("Login successful");
     await loadDashboard();
-
   } catch (error) {
-    alert(error.message);
+    $("msg").textContent = error.message;
   }
 }
 
 async function register(event) {
-  if (event) event.preventDefault();
+  event.preventDefault();
 
   try {
     const name = $("rn").value.trim();
@@ -71,11 +69,13 @@ async function register(event) {
       })
     });
 
-    alert(data.message || "Registration successful");
-    showTab("login");
+    $("msg").textContent =
+      "Registration successful. Referral Code: " +
+      data.referralCode;
 
+    showTab("login");
   } catch (error) {
-    alert(error.message);
+    $("msg").textContent = error.message;
   }
 }
 
@@ -86,27 +86,32 @@ async function loadDashboard() {
     $("auth").classList.add("hidden");
     $("dashboard").classList.remove("hidden");
 
-    $("balance").textContent =
-      "₹" + Number(data.wallet?.balance || 0).toFixed(2);
+    if ($("balance")) {
+      $("balance").textContent =
+        "₹" + Number(data.wallet?.balance || 0).toFixed(2);
+    }
 
-    $("ref").textContent =
-      data.user?.referral_code || "-";
+    if ($("ref")) {
+      $("ref").textContent =
+        data.user?.referral_code || "-";
+    }
 
-    const txBox = $("tx");
+    if ($("tx")) {
+      $("tx").innerHTML = "";
 
-    if (txBox) {
-      txBox.innerHTML = "";
+      (data.transactions || []).forEach((item) => {
+        const div = document.createElement("div");
 
-      if (!data.transactions || data.transactions.length === 0) {
-        txBox.textContent = "No transactions yet.";
-      } else {
-        data.transactions.forEach((tx) => {
-          const div = document.createElement("div");
-          div.textContent =
-            `${tx.type} - ₹${tx.amount} - ${tx.status}`;
-          txBox.appendChild(div);
-        });
-      }
+        div.innerHTML = `
+          <p>
+            <strong>${item.type}</strong>
+            — ₹${item.amount}
+            — ${item.status}
+          </p>
+        `;
+
+        $("tx").appendChild(div);
+      });
     }
 
     await loadPlans();
@@ -114,8 +119,6 @@ async function loadDashboard() {
   } catch (error) {
     localStorage.removeItem("ag_token");
     token = null;
-    $("dashboard").classList.add("hidden");
-    $("auth").classList.remove("hidden");
   }
 }
 
@@ -123,21 +126,28 @@ async function loadPlans() {
   try {
     const data = await api("/api/plans");
 
+    const plans = Array.isArray(data)
+      ? data
+      : (data.plans || []);
+
     const box = $("plans");
+
     if (!box) return;
 
     box.innerHTML = "";
 
-    const plans = Array.isArray(data) ? data : (data.plans || []);
-plans.forEach((plan) => {
+    plans.forEach((plan) => {
       const div = document.createElement("div");
+
       div.className = "plan-card";
 
       div.innerHTML = `
         <h3>${plan.name}</h3>
         <p>Amount: ₹${plan.amount}</p>
         <p>Duration: ${plan.duration_days} days</p>
-        <button onclick="viewPlan(${plan.id})">View</button>
+        <button onclick="viewPlan(${plan.id})">
+          View
+        </button>
       `;
 
       box.appendChild(div);
@@ -151,17 +161,25 @@ plans.forEach((plan) => {
 function viewPlan(id) {
   alert(
     "Plan ID: " + id +
-    "\nDemo mode: payment/order flow is not connected."
+    "\n\nDemo mode: payment/order flow is not connected."
   );
 }
 
 async function withdraw(event) {
-  if (event) event.preventDefault();
+  event.preventDefault();
 
   try {
     const amount = Number($("wa").value);
     const method = $("wm").value.trim();
     const account = $("wacc").value.trim();
+
+    if (!amount || amount <= 0) {
+      throw new Error("Please enter a valid amount.");
+    }
+
+    if (!method || !account) {
+      throw new Error("Please enter withdrawal details.");
+    }
 
     const data = await api("/api/withdrawals", {
       method: "POST",
@@ -194,8 +212,8 @@ function logout() {
 window.login = login;
 window.register = register;
 window.withdraw = withdraw;
-window.logout = logout;
 window.viewPlan = viewPlan;
+window.logout = logout;
 
 document.addEventListener("DOMContentLoaded", () => {
   if (token) {

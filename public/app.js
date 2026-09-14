@@ -26,34 +26,12 @@ async function api(url, options = {}) {
   return data;
 }
 
-async function registerUser() {
+async function login(event) {
+  if (event) event.preventDefault();
+
   try {
-    const fullName = $("regName").value.trim();
-    const mobile = $("regMobile").value.trim();
-    const password = $("regPassword").value;
-    const inviteCode = $("regInvite").value.trim();
-
-    const data = await api("/api/register", {
-      method: "POST",
-      body: JSON.stringify({
-        fullName,
-        mobile,
-        password,
-        inviteCode
-      })
-    });
-
-    alert(data.message || "Registration successful");
-    showTab("login");
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-async function loginUser() {
-  try {
-    const mobile = $("loginMobile").value.trim();
-    const password = $("loginPassword").value;
+    const mobile = $("lm").value.trim();
+    const password = $("lp").value;
 
     const data = await api("/api/login", {
       method: "POST",
@@ -67,7 +45,35 @@ async function loginUser() {
     localStorage.setItem("ag_token", token);
 
     alert("Login successful");
-    loadDashboard();
+    await loadDashboard();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function register(event) {
+  if (event) event.preventDefault();
+
+  try {
+    const name = $("rn").value.trim();
+    const mobile = $("rm").value.trim();
+    const password = $("rp").value;
+    const referralCode = $("rr").value.trim();
+
+    const data = await api("/api/register", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        mobile,
+        password,
+        referralCode
+      })
+    });
+
+    alert(data.message || "Registration successful");
+    showTab("login");
+
   } catch (error) {
     alert(error.message);
   }
@@ -77,21 +83,39 @@ async function loadDashboard() {
   try {
     const data = await api("/api/me");
 
-    if ($("authArea")) $("authArea").classList.add("hidden");
-    if ($("dashboard")) $("dashboard").classList.remove("hidden");
+    $("auth").classList.add("hidden");
+    $("dashboard").classList.remove("hidden");
 
-    if ($("userName")) {
-      $("userName").textContent = data.user.full_name || data.user.mobile;
+    $("balance").textContent =
+      "₹" + Number(data.wallet?.balance || 0).toFixed(2);
+
+    $("ref").textContent =
+      data.user?.referral_code || "-";
+
+    const txBox = $("tx");
+
+    if (txBox) {
+      txBox.innerHTML = "";
+
+      if (!data.transactions || data.transactions.length === 0) {
+        txBox.textContent = "No transactions yet.";
+      } else {
+        data.transactions.forEach((tx) => {
+          const div = document.createElement("div");
+          div.textContent =
+            `${tx.type} - ₹${tx.amount} - ${tx.status}`;
+          txBox.appendChild(div);
+        });
+      }
     }
 
-    if ($("balance")) {
-      $("balance").textContent = "₹" + Number(data.wallet.balance || 0).toFixed(2);
-    }
+    await loadPlans();
 
-    loadPlans();
   } catch (error) {
     localStorage.removeItem("ag_token");
     token = null;
+    $("dashboard").classList.add("hidden");
+    $("auth").classList.remove("hidden");
   }
 }
 
@@ -117,47 +141,60 @@ async function loadPlans() {
 
       box.appendChild(div);
     });
+
   } catch (error) {
     console.error(error);
   }
 }
 
 function viewPlan(id) {
-  alert("Plan ID: " + id + "\nDemo mode: payment/order flow is not connected.");
+  alert(
+    "Plan ID: " + id +
+    "\nDemo mode: payment/order flow is not connected."
+  );
 }
 
-async function withdrawMoney() {
-  try {
-    const amount = Number($("withdrawAmount").value);
+async function withdraw(event) {
+  if (event) event.preventDefault();
 
-    if (!amount || amount <= 0) {
-      alert("Please enter a valid amount.");
-      return;
-    }
+  try {
+    const amount = Number($("wa").value);
+    const method = $("wm").value.trim();
+    const account = $("wacc").value.trim();
 
     const data = await api("/api/withdrawals", {
       method: "POST",
-      body: JSON.stringify({ amount })
+      body: JSON.stringify({
+        amount,
+        method,
+        account
+      })
     });
 
     alert(data.message || "Withdrawal request submitted");
-    loadDashboard();
+
+    $("wa").value = "";
+    $("wm").value = "";
+    $("wacc").value = "";
+
+    await loadDashboard();
+
   } catch (error) {
     alert(error.message);
   }
 }
 
-function logoutUser() {
+function logout() {
   localStorage.removeItem("ag_token");
   token = null;
   location.reload();
 }
 
-window.registerUser = registerUser;
-window.loginUser = loginUser;
-window.withdrawMoney = withdrawMoney;
+window.login = login;
+window.register = register;
+window.withdraw = withdraw;
+window.logout = logout;
 window.viewPlan = viewPlan;
-window.logoutUser = logoutUser;
 
 document.addEventListener("DOMContentLoaded", () => {
   if (token) {

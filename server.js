@@ -4,6 +4,7 @@ const path=require('path');
 const bcrypt=require('bcryptjs');
 const jwt=require('jsonwebtoken');
 const Razorpay=require('razorpay');
+const crypto=require('crypto');
 const Database=require('better-sqlite3');
 
 const app=express();
@@ -58,7 +59,81 @@ app.get('/api/me',auth,(req,res)=>{
 });
 
 app.get('/api/plans',auth,(req,res)=>res.json(db.prepare('SELECT * FROM plans ORDER BY amount').all()));
+app.post('/api/payment/order',auth,async(req,res)=>{
+  try{
+    const {planId}=req.body;
 
+    const plan=db.prepare('SELECT * FROM plans WHERE id=?').get(planId);
+
+    if(!plan){
+      return res.status(404).json({error:'Plan not found'});
+    }
+
+    const amount=Math.round(Number(plan.amount)*100);
+
+    const order=await razorpay.orders.create({
+      amount,
+      currency:'INR',
+      receipt:`ag_${req.user.id}_${plan.id}_${Date.now()}`,
+      notes:{
+        user_id:String(req.user.id),
+        plan_id:String(plan.id)
+      }
+    });
+
+    res.json({
+      keyId:process.env.RAZORPAY_KEY_ID,
+      orderId:order.id,
+      amount:order.amount,
+      currency:order.currency,
+      planId:plan.id,
+      planName:plan.name
+    });
+
+  }catch(error){
+    console.error('Razorpay order error:',error);
+    res.status(500).json({error:'Unable to create payment order'});
+  }
+});
+
+
+app.post('/api/payment/verify',auth,(req,res)=>{
+  try{
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    }=req.body;
+
+    if(
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ){
+      return res.status(400).json({error:'Payment details missing'});
+    }
+
+    const expectedSignature=crypto
+      .createHmac('sha256',process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpay_order_id+'|'+razorpay_payment_id)
+      .digest('hex');
+
+    if(expectedSignature!==razorpay_signature){
+      return res.status(400).json({error:'Payment verification failed'});
+    }
+
+    res.json({
+      success:true,
+      message:'Payment verified successfully',
+      paymentId:razorpay_payment_id,
+      orderId:razorpay_order_id
+    });
+
+  }catch(error){
+    console.error('Payment verification error:',error);
+    res.status(500).json({error:'Payment verification failed'});
+  }
+});
 app.post('/api/withdrawals',auth,(req,res)=>{
   const {amount,method,account}=req.body;
   if(!Number.isFinite(amount)||amount<=0||!method||!account) return res.status(400).json({error:'Invalid withdrawal request'});

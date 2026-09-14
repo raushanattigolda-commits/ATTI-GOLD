@@ -3,10 +3,17 @@ const express=require('express');
 const path=require('path');
 const bcrypt=require('bcryptjs');
 const jwt=require('jsonwebtoken');
+const Razorpay=require('razorpay');
 const Database=require('better-sqlite3');
 
 const app=express();
 const db=new Database('atti_gold.db');
+
+const razorpay=new Razorpay({
+  key_id:process.env.RAZORPAY_KEY_ID,
+  key_secret:process.env.RAZORPAY_KEY_SECRET
+});
+
 const PORT=process.env.PORT||3000;
 const SECRET=process.env.JWT_SECRET||'dev-only-secret';
 

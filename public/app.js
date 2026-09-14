@@ -158,12 +158,72 @@ async function loadPlans() {
   }
 }
 
-function viewPlan(id) {
-  alert(
-    "Plan ID: " + id +
-    "\n\nDemo mode: payment/order flow is not connected."
-  );
+async function viewPlan(id) {
+  try {
+    const data = await api("/api/payment/order", {
+      method: "POST",
+      body: JSON.stringify({ planId: id })
+    });
+
+    if (!window.Razorpay) {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+
+      await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const options = {
+      key: data.keyId,
+      amount: data.amount,
+      currency: data.currency,
+      name: "ATTI GOLD",
+      description: data.planName,
+      order_id: data.orderId,
+
+      handler: async function (response) {
+        try {
+          const result = await api("/api/payment/verify", {
+            method: "POST",
+            body: JSON.stringify(response)
+          });
+
+          alert(
+            "Payment successful!\n\n" +
+            "Payment ID: " + result.paymentId
+          );
+
+          loadDashboard();
+
+        } catch (error) {
+          alert("Payment verification failed: " + error.message);
+        }
+      },
+
+      theme: {
+        color: "#d4af37"
+      }
+    };
+
+    const payment = new Razorpay(options);
+
+    payment.on("payment.failed", function (response) {
+      alert(
+        "Payment failed.\n\n" +
+        (response.error?.description || "Please try again.")
+      );
+    });
+
+    payment.open();
+
+  } catch (error) {
+    alert("Unable to start payment: " + error.message);
+  }
 }
+  
 
 async function withdraw(event) {
   event.preventDefault();
